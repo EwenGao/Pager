@@ -1,0 +1,34 @@
+@model Pager<Article>
+@{
+   
+    Model.Container = "ul";
+    Model.ClassName = "page";
+    Model.PageFormat = "<li>{0}</li>";
+    Model.CurreFormat = "<li>{0}</li>";
+    Model.AlwaysShow = false;
+}
+<div class="jync_banner">
+    <div></div>
+</div>
+@Html.Partial("_ResearchMenu", "")
+<div id="content">
+       <div class="jync_box">
+        <div class="jync_list">
+            @if (Model != null && Model.Count > 0)
+            {
+                <ul class="list">
+                    @foreach (var m in Model)
+                    {
+                        <li>
+                            <h3><a target="_blank" href="@m.Art_PdfPath">@m.Art_Title</a></h3>
+                            <p>@m.Art_Description.CutOut(200, "...")</p>
+                            <div class="timess"><span>@m.Art_ShowTime.ToString("yyyy年MM月dd日 HH:mm")</span><a target="_blank" href="@m.Art_PdfPath">查看详细内容>></a></div>
+                        </li>
+                    }
+                </ul>
+            }
+            @Html.Pager(Model)
+        </div>
+    </div>
+</div>
+
