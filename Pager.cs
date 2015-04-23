@@ -6,6 +6,7 @@
             ShowNumber = 8;
             Current = 1;
             PageName = "pageIndex";
+            PageFormat="{0}";
         }
         public Pager()
         {
