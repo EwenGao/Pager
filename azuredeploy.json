@@ -508,31 +508,6 @@
         "description": "Admin password"
       }
     },
-    "sshPublicKey": {
-      "type": "securestring",
-      "defaultValue": "",
-      "metadata": {
-        "description": "Admin ssh public key"
-      }
-    },
-    "securityAdminPassword": {
-      "type": "securestring",
-      "metadata": {
-        "description": "Password for the superuser 'es_admin' in 2.x, or 'elastic' in 5.x and up. Must be > 6 characters"
-      }
-    },
-    "securityReadPassword": {
-      "type": "securestring",
-      "metadata": {
-        "description": "Password for the 'es_read' user with user (read-only) role. Must be > 6 characters"
-      }
-    },
-    "securityKibanaPassword": {
-      "type": "securestring",
-      "metadata": {
-        "description": "Password for the `es_kibana` user with kibana4 role. Must be > 6 characters"
-      }
-    },
     "location": {
       "type": "string",
       "defaultValue": "[resourceGroup().location]",
