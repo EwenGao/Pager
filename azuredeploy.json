@@ -1,462 +1,1320 @@
 {
-    "$schema":"https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-    "contentVersion":"1.0.0.0",
-    "parameters":{
-        "esClusterName":{
-            "type":"string",
-            "defaultValue":"elasticsearch",
-            "metadata":{
-                "description":"The name of the Elasticsearch cluster."
-            }
-        },
-        "esVersion":{
-            "type":"string",
-            "defaultValue":"5.6.3",
-            "allowedValues":[
-                "5.6.3",
-                "5.5.3",
-                "5.5.2",
-                "5.5.1",
-                "5.5.0",
-                "5.4.3",
-                "5.4.2",
-                "5.4.0",
-                "5.3.2",
-                "5.2.2",
-                "5.1.2",
-                "5.0.2",
-                "2.3.1",
-                "2.2.2",
-                "2.1.2",
-                "1.7.5"
-            ],
-            "metadata":{
-                "description":"Elasticsearch version to install."
-            }
-        },
-        "vmClientNodeCount":{
-            "type":"int",
-            "defaultValue":1,
-            "allowedValues":[
-                0,
-                1,
-                2,
-                3,
-                4,
-                5,
-                6,
-                7,
-                8,
-                9
-            ],
-            "metadata":{
-                "description":"Number of Elasticsearch client nodes to provision (Setting this to zero puts the data nodes on the load balancer)"
-            }
-        },
-        "vmDataNodeCount":{
-            "type":"int",
-            "defaultValue":1,
-            "metadata":{
-                "description":"Number of Elasticsearch data nodes"
-            }
-        },
-        "vmSizeMasterNodes":{
-            "type":"string",
-            "defaultValue":"Standard_D2_v2",
-            "allowedValues":[
-                "Standard_D2_v2",
-                "Standard_D3_v2",
-                "Standard_D4_v2",
-                "Standard_A2",
-                "Standard_A3",
-                "Standard_A4",
-                "Standard_A5",
-                "Standard_A6",
-                "Standard_A7",
-                "Standard_DS2",
-                "Standard_DS3",
-                "Standard_DS4",
-                "Standard_DS13"
-            ],
-            "metadata":{
-                "description":"Size of the Elasticsearch cluster master nodes"
-            }
-        },
-        "vmSizeClientNodes":{
-            "type":"string",
-            "defaultValue":"Standard_D2_v2",
-            "allowedValues":[
-                "Standard_D2_v2",
-                "Standard_D3_v2",
-                "Standard_D4_v2",
-                "Standard_A2",
-                "Standard_A3",
-                "Standard_A4",
-                "Standard_A5",
-                "Standard_A6",
-                "Standard_A7",
-                "Standard_DS2",
-                "Standard_DS3",
-                "Standard_DS4",
-                "Standard_DS13"
-            ],
-            "metadata":{
-                "description":"Size of the Elasticsearch cluster client nodes"
-            }
-        },
-        "vmSizeDataNodes":{
-            "type":"string",
-            "defaultValue":"Standard_D2_v2",
-            "allowedValues":[
-                "Standard_D2_v2",
-                "Standard_D3_v2",
-                "Standard_D4_v2",
-                "Standard_A2",
-                "Standard_A3",
-                "Standard_A4",
-                "Standard_A5",
-                "Standard_A6",
-                "Standard_A7",
-                "Standard_DS2",
-                "Standard_DS3",
-                "Standard_DS4",
-                "Standard_DS13"
-            ],
-            "metadata":{
-                "description":"Size of the Elasticsearch cluster data nodes"
-            }
-        },
-        "encodedConfigString":{
-            "type":"string",
-            "defaultValue":"na",
-            "metadata":{
-                "description":"Base64 encoded string which is the Logstash configuration. If you don't want to enter a custom Logstash configuration and would like to use the logstash-input-azurewadtable plugin set this to 'na'."
-            }
-        },
-        "adminUsername":{
-            "type":"string",
-            "metadata":{
-                "description":"User name for the Virtual Machine."
-            }
-        },
-        "adminPassword":{
-            "type":"securestring",
-            "metadata":{
-                "description":"Password for the Virtual Machine."
-            }
-        },
-        "ubuntuOSVersion":{
-            "type":"string",
-            "defaultValue":"14.04.4-LTS",
-            "allowedValues":[
-                "12.04.5-LTS",
-                "14.04.4-LTS",
-                "16.04.0-LTS"
-            ],
-            "metadata":{
-                "description":"The Ubuntu version for the VM. This will pick a fully patched image of this given Ubuntu version."
-            }
-        },
-        "existingDiagnosticsStorageAccountName":{
-            "type":"string",
-            "defaultValue":"",
-            "metadata":{
-                "description":"Existing diagnostics storage account name."
-            }
-        },
-        "existingDiagnosticsStorageAccountKey":{
-            "type":"string",
-            "defaultValue":"",
-            "metadata":{
-                "description":"Existing diagnostics storage account key."
-            }
-        },
-        "existingDiagnosticsStorageTableNames":{
-            "type":"string",
-            "defaultValue":"",
-            "metadata":{
-                "description":"List of existing tables containing diagnostics data separated by semicolon (;)."
-            }
-        },
-        "_artifactsLocation":{
-            "type":"string",
-            "defaultValue":"https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/diagnostics-with-elk",
-            "metadata":{
-                "description":"Change this value to your repo name if deploying from a fork"
-            }
-        },
-        "_artifactsLocationSasToken":{
-            "type":"securestring",
-            "defaultValue":"",
-            "metadata":{
-                "description":"Auto-generated token to access _artifactsLocation"
-            }
-        }
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "artifactsBaseUrl": {
+      "type": "string",
+      "defaultValue": "https://raw.githubusercontent.com/elastic/azure-marketplace/master/src",
+      "metadata": {
+        "artifactsBaseUrl": "Base URL of the Elastic template gallery package"
+      }
     },
-    "variables":{
-        "storageAccountPrefix":"[concat(substring(uniqueString(resourceGroup().id, parameters('esClusterName')), 0, 6), substring(parameters('esClusterName'), 0, 3))]",
-        "storageAccountName":"[concat(variables('storageAccountPrefix'), 'log')]",
-        "extensionName":"ELKSimple",
-        "imagePublisher":"Canonical",
-        "imageOffer":"UbuntuServer",
-        "OSDiskName":"osdiskforlinuxsimple",
-        "storageAccountType":"Standard_LRS",
-        "vmStorageAccountContainerName":"vhds",
-        "vmName":"logstashvm1",
-        "vmSize":"Standard_D1",
-        "vmNicName":"[concat(variables('vmName'), '-nic')]",
-        "vmNsgName":"[concat(variables('vmName'), '-nsg')]",
-        "vmPipName":"[concat(variables('vmName'), '-pip')]",
-        "virtualNetworkName":"elkvnet2",
-        "subnetRef":"[concat(resourceId('Microsoft.Network/virtualNetworks', variables('virtualNetworkName')), '/subnets/', 'other')]",
-        "esHost":"10.0.2.100",
-        "esTemplateBase":"https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/elasticsearch",
-        "esDeploymentName":"esDeploymentForDiagnosticsWithELK"
+    "elasticTags": {
+      "type": "object",
+      "defaultValue": {
+        "provider": "648D2193-0CE0-4EFB-8A82-AF9792184FD9"
+      },
+      "metadata": {
+        "description": "A unique identifier to allow the Azure Infrastructure to understand the origin of resources deployed to Azure. You do not need to supply a value for this."
+      }
     },
-    "resources":[
+    "esVersion": {
+      "type": "string",
+      "defaultValue": "5.6.3",
+      "allowedValues": [
+        "2.0.2",
+        "2.1.2",
+        "2.2.2",
+        "2.3.5",
+        "2.4.4",
+        "5.0.2",
+        "5.1.2",
+        "5.2.2",
+        "5.3.2",
+        "5.4.0",
+        "5.4.2",
+        "5.4.3",
+        "5.5.0",
+        "5.5.1",
+        "5.5.2",
+        "5.5.3",
+        "5.6.3"
+      ],
+      "metadata": {
+        "description": "Elasticsearch version to install"
+      }
+    },
+    "esClusterName": {
+      "type": "string",
+      "defaultValue": "elasticsearch",
+      "metadata": {
+        "description": "The name of the Elasticsearch cluster"
+      }
+    },
+    "loadBalancerType": {
+      "type": "string",
+      "defaultValue": "internal",
+      "allowedValues": [
+        "internal",
+        "external",
+        "gateway"
+      ],
+      "metadata": {
+        "description": "Set up an internal or external load balancer, or use Application Gateway (gateway) for load balancing and SSL offload. If you are setting up Elasticsearch on a publicly available endpoint, it is *strongly recommended* to secure your nodes with a product like Elastic's X-Pack Security"
+      }
+    },
+    "azureCloudPlugin": {
+      "type": "string",
+      "allowedValues": [
+        "Yes",
+        "No"
+      ],
+      "defaultValue": "No",
+      "metadata": {
+        "description": "Choose whether to install Azure Cloud plugin. The plugin allows an existing Azure storage account to be used for snapshot and restore"
+      }
+    },
+    "azureCloudStorageAccountName": {
+      "type": "string",
+      "defaultValue": "",
+      "maxLength": 24,
+      "metadata": {
+        "description": "The name of an existing storage account to use for snapshots with Azure Cloud plugin. Must be between 3 and 24 alphanumeric lowercase or characters or numbers."
+      }
+    },
+    "azureCloudStorageAccountKey": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "The access key of an existing storage account to use for snapshots with Azure Cloud plugin"
+      }
+    },
+    "xpackPlugins": {
+      "type": "string",
+      "allowedValues": [
+        "Yes",
+        "No"
+      ],
+      "defaultValue": "Yes",
+      "metadata": {
+        "description": "Install the Commercial X-Pack Plugins - Monitoring, Security, Alerting, Graph* (Elasticsearch 2.3.0+) and if installing Kibana, Reporting and Profiler"
+      }
+    },
+    "esAdditionalPlugins": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Additional Elasticsearch plugins to install.  Each plugin must be separated by a semicolon. e.g. analysis-icu;mapper-attachments"
+      }
+    },
+    "esAdditionalYaml": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Additional configuration for Elasticsearch yaml configuration file. Each line must be separated by a newline character e.g. action.auto_create_index: .security\nindices.queries.cache.size:5%"
+      }
+    },
+    "kibana": {
+      "type": "string",
+      "defaultValue": "Yes",
+      "allowedValues": [
+        "Yes",
+        "No"
+      ],
+      "metadata": {
+        "description": "Provision a machine with Kibana on it"
+      }
+    },
+    "vmSizeKibana": {
+      "type": "string",
+      "defaultValue": "Standard_A1",
+      "allowedValues": [
+        "Standard_A0",
+        "Standard_A1",
+        "Standard_A2",
+        "Standard_A3",
+        "Standard_A4",
+        "Standard_A5",
+        "Standard_A6",
+        "Standard_A7",
+        "Standard_D1",
+        "Standard_D2",
+        "Standard_D3",
+        "Standard_D4",
+        "Standard_D11",
+        "Standard_D12",
+        "Standard_D13",
+        "Standard_D14",
+        "Standard_D1_v2",
+        "Standard_D2_v2",
+        "Standard_D3_v2",
+        "Standard_D4_v2",
+        "Standard_D5_v2",
+        "Standard_D11_v2",
+        "Standard_D12_v2",
+        "Standard_D13_v2",
+        "Standard_D14_v2",
+        "Standard_D15_v2",
+        "Standard_DS1",
+        "Standard_DS2",
+        "Standard_DS3",
+        "Standard_DS4",
+        "Standard_DS11",
+        "Standard_DS12",
+        "Standard_DS13",
+        "Standard_DS14",
+        "Standard_DS1_v2",
+        "Standard_DS2_v2",
+        "Standard_DS3_v2",
+        "Standard_DS4_v2",
+        "Standard_DS5_v2",
+        "Standard_DS11_v2",
+        "Standard_DS12_v2",
+        "Standard_DS13_v2",
+        "Standard_DS14_v2",
+        "Standard_DS15_v2",
+        "Standard_F1",
+        "Standard_F2",
+        "Standard_F4",
+        "Standard_F8",
+        "Standard_F16",
+        "Standard_F1s",
+        "Standard_F2s",
+        "Standard_F4s",
+        "Standard_F8s",
+        "Standard_F16s"
+      ],
+      "metadata": {
+        "description": "Size of the Elasticsearch Kibana node"
+      }
+    },
+    "kibanaCertBlob": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "A Base-64 encoded form of the certificate (.crt) to secure HTTPS communications between the browser and Kibana."
+      }
+    },
+    "kibanaKeyBlob": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "A Base-64 encoded form of the private key (.key) to secure HTTPS communications between the browser and Kibana."
+      }
+    },
+    "kibanaKeyPassphrase": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "The passphrase to decrypt the private key. Optional as the key may not be encrypted. Supported only in 5.3.0+"
+      }
+    },
+    "jumpbox": {
+      "type": "string",
+      "defaultValue": "No",
+      "allowedValues": [
+        "Yes",
+        "No"
+      ],
+      "metadata": {
+        "description": "Optionally add a virtual machine to the deployment which can be used to connect and manage virtual machines within the cluster"
+      }
+    },
+    "vmHostNamePrefix": {
+      "type": "string",
+      "defaultValue": "",
+      "maxLength": 5,
+      "metadata": {
+        "description": "The prefix to use for hostnames when naming virtual machines in the cluster. Can be up to 5 characters in length, must begin with an alphanumeric character and can contain alphanumeric and hyphen characters. Hostnames are used for resolution of master nodes so if you are deploying a cluster into an existing virtual network containing an existing Elasticsearch cluster, be sure to set this to a unique prefix to differentiate the hostnames of this cluster from an existing cluster"
+      }
+    },
+    "vmSizeDataNodes": {
+      "type": "string",
+      "defaultValue": "Standard_D1",
+      "allowedValues": [
+        "Standard_A0",
+        "Standard_A1",
+        "Standard_A2",
+        "Standard_A3",
+        "Standard_A4",
+        "Standard_A5",
+        "Standard_A6",
+        "Standard_A7",
+        "Standard_D1",
+        "Standard_D2",
+        "Standard_D3",
+        "Standard_D4",
+        "Standard_D11",
+        "Standard_D12",
+        "Standard_D13",
+        "Standard_D14",
+        "Standard_D1_v2",
+        "Standard_D2_v2",
+        "Standard_D3_v2",
+        "Standard_D4_v2",
+        "Standard_D5_v2",
+        "Standard_D11_v2",
+        "Standard_D12_v2",
+        "Standard_D13_v2",
+        "Standard_D14_v2",
+        "Standard_D15_v2",
+        "Standard_DS1",
+        "Standard_DS2",
+        "Standard_DS3",
+        "Standard_DS4",
+        "Standard_DS11",
+        "Standard_DS12",
+        "Standard_DS13",
+        "Standard_DS14",
+        "Standard_DS1_v2",
+        "Standard_DS2_v2",
+        "Standard_DS3_v2",
+        "Standard_DS4_v2",
+        "Standard_DS5_v2",
+        "Standard_DS11_v2",
+        "Standard_DS12_v2",
+        "Standard_DS13_v2",
+        "Standard_DS14_v2",
+        "Standard_DS15_v2",
+        "Standard_F1",
+        "Standard_F2",
+        "Standard_F4",
+        "Standard_F8",
+        "Standard_F16",
+        "Standard_F1s",
+        "Standard_F2s",
+        "Standard_F4s",
+        "Standard_F8s",
+        "Standard_F16s"
+      ],
+      "metadata": {
+        "description": "Size of the Elasticsearch data nodes"
+      }
+    },
+    "vmDataDiskCount": {
+      "type": "int",
+      "defaultValue": 40,
+      "allowedValues": [
+        0,
+        1,
+        2,
+        4,
+        8,
+        16,
+        32,
+        40
+      ],
+      "metadata": {
+        "description": "Number of disks to attach to each data node in RAID 0 setup. If the number of disks selected is more than can be attached to the data node VM size, the maximum number of disks that can be attached will be used. If 1 disk is selected, it is not RAIDed. If 0 disks are selected, the temporary disk will be used to store Elasticsearch data. IMPORTANT: The temporary disk is ephemeral in nature so be sure you now the trade-offs when choosing 0 disks."
+      }
+    },
+    "vmDataDiskSize": {
+      "type": "string",
+      "defaultValue": "Large",
+      "allowedValues": [
+        "Small",
+        "Medium",
+        "Large"
+      ],
+      "metadata": {
+        "description": "The disk size of each attached disk, Small (128Gb), Medium (512Gb) or Large (1024Gb). For Premium Storage, this equates to P10, P20 and P30, respectively."
+      }
+    },
+    "vmDataNodeCount": {
+      "type": "int",
+      "defaultValue": 3,
+      "minValue": 1,
+      "metadata": {
+        "description": "Number of Elasticsearch data nodes"
+      }
+    },
+    "storageAccountType": {
+      "type": "string",
+      "defaultValue": "Default",
+      "allowedValues": [
+        "Default",
+        "Standard"
+      ],
+      "metadata": {
+        "description": "The storage account type of the attached disks (Default or Standard). The Default storage account type will be Premium Storage for VMs that support Premium Storage and Standard Storage for those that do not."
+      }
+    },
+    "dataNodesAreMasterEligible": {
+      "type": "string",
+      "defaultValue": "No",
+      "allowedValues": [
+        "Yes",
+        "No"
+      ],
+      "metadata": {
+        "description": "Make all data nodes master-eligible. This can be useful for small elasticsearch cluster deployments, but for larger deployments it is recommended to use dedicated master nodes"
+      }
+    },
+    "vmSizeMasterNodes": {
+      "type": "string",
+      "defaultValue": "Standard_D1",
+      "allowedValues": [
+        "Standard_A0",
+        "Standard_A1",
+        "Standard_A2",
+        "Standard_A3",
+        "Standard_A4",
+        "Standard_A5",
+        "Standard_A6",
+        "Standard_A7",
+        "Standard_D1",
+        "Standard_D2",
+        "Standard_D3",
+        "Standard_D4",
+        "Standard_D11",
+        "Standard_D12",
+        "Standard_D13",
+        "Standard_D14",
+        "Standard_D1_v2",
+        "Standard_D2_v2",
+        "Standard_D3_v2",
+        "Standard_D4_v2",
+        "Standard_D5_v2",
+        "Standard_D11_v2",
+        "Standard_D12_v2",
+        "Standard_D13_v2",
+        "Standard_D14_v2",
+        "Standard_D15_v2",
+        "Standard_DS1",
+        "Standard_DS2",
+        "Standard_DS3",
+        "Standard_DS4",
+        "Standard_DS11",
+        "Standard_DS12",
+        "Standard_DS13",
+        "Standard_DS14",
+        "Standard_DS1_v2",
+        "Standard_DS2_v2",
+        "Standard_DS3_v2",
+        "Standard_DS4_v2",
+        "Standard_DS5_v2",
+        "Standard_DS11_v2",
+        "Standard_DS12_v2",
+        "Standard_DS13_v2",
+        "Standard_DS14_v2",
+        "Standard_DS15_v2",
+        "Standard_F1",
+        "Standard_F2",
+        "Standard_F4",
+        "Standard_F8",
+        "Standard_F16",
+        "Standard_F1s",
+        "Standard_F2s",
+        "Standard_F4s",
+        "Standard_F8s",
+        "Standard_F16s"
+      ],
+      "metadata": {
+        "description": "Size of the Elasticsearch master nodes, if data nodes are not master eligible, 3 master nodes of this size will be provisioned"
+      }
+    },
+    "vmClientNodeCount": {
+      "type": "int",
+      "defaultValue": 0,
+      "minValue": 0,
+      "metadata": {
+        "description": "Number of Elasticsearch client nodes to provision. A value of 0 puts the data nodes on the load balancer"
+      }
+    },
+    "vmSizeClientNodes": {
+      "type": "string",
+      "defaultValue": "Standard_D1",
+      "allowedValues": [
+        "Standard_A0",
+        "Standard_A1",
+        "Standard_A2",
+        "Standard_A3",
+        "Standard_A4",
+        "Standard_A5",
+        "Standard_A6",
+        "Standard_A7",
+        "Standard_D1",
+        "Standard_D2",
+        "Standard_D3",
+        "Standard_D4",
+        "Standard_D11",
+        "Standard_D12",
+        "Standard_D13",
+        "Standard_D14",
+        "Standard_D1_v2",
+        "Standard_D2_v2",
+        "Standard_D3_v2",
+        "Standard_D4_v2",
+        "Standard_D5_v2",
+        "Standard_D11_v2",
+        "Standard_D12_v2",
+        "Standard_D13_v2",
+        "Standard_D14_v2",
+        "Standard_D15_v2",
+        "Standard_DS1",
+        "Standard_DS2",
+        "Standard_DS3",
+        "Standard_DS4",
+        "Standard_DS11",
+        "Standard_DS12",
+        "Standard_DS13",
+        "Standard_DS14",
+        "Standard_DS1_v2",
+        "Standard_DS2_v2",
+        "Standard_DS3_v2",
+        "Standard_DS4_v2",
+        "Standard_DS5_v2",
+        "Standard_DS11_v2",
+        "Standard_DS12_v2",
+        "Standard_DS13_v2",
+        "Standard_DS14_v2",
+        "Standard_DS15_v2",
+        "Standard_F1",
+        "Standard_F2",
+        "Standard_F4",
+        "Standard_F8",
+        "Standard_F16",
+        "Standard_F1s",
+        "Standard_F2s",
+        "Standard_F4s",
+        "Standard_F8s",
+        "Standard_F16s"
+      ],
+      "metadata": {
+        "description": "Size of the Elasticsearch client nodes"
+      }
+    },
+    "adminUsername": {
+      "type": "string",
+      "metadata": {
+        "description": "Admin username used when provisioning virtual machines"
+      }
+    },
+    "authenticationType": {
+      "type": "string",
+      "defaultValue": "password",
+      "allowedValues": [
+        "password",
+        "sshPublicKey"
+      ],
+      "metadata": {
+        "description": "Choose a password or ssh public key for the Admin username used to access virtual machines"
+      }
+    },
+    "adminPassword": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Admin password"
+      }
+    },
+    "sshPublicKey": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Admin ssh public key"
+      }
+    },
+    "securityAdminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Password for the superuser 'es_admin' in 2.x, or 'elastic' in 5.x and up. Must be > 6 characters"
+      }
+    },
+    "securityReadPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Password for the 'es_read' user with user (read-only) role. Must be > 6 characters"
+      }
+    },
+    "securityKibanaPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Password for the `es_kibana` user with kibana4 role. Must be > 6 characters"
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Location where resources will be provisioned. By default, the template deploys the resources to the same location as the resource group. If specified, must be a valid Azure location e.g. 'australiasoutheast'"
+      }
+    },
+    "vNetNewOrExisting": {
+      "type": "string",
+      "defaultValue": "new",
+      "allowedValues": [
+        "new",
+        "existing"
+      ],
+      "metadata": {
+        "description": "Choose to create a new Virtual Network or use an existing one. If choosing an existing network, the subnet also needs to exist."
+      }
+    },
+    "vNetName": {
+      "type": "string",
+      "defaultValue": "es-net",
+      "metadata": {
+        "description": "Virtual Network Name"
+      }
+    },
+    "vNetExistingResourceGroup": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "The name of the resource group for the existing Virtual Network. Required when using an existing Virtual Network"
+      }
+    },
+    "vNetNewAddressPrefix": {
+      "type": "string",
+      "defaultValue": "10.0.0.0/24",
+      "metadata": {
+        "description": "The address prefix size to use for a New Virtual Network. Required when creating a new Virtual Network"
+      }
+    },
+    "vNetLoadBalancerIp": {
+      "type": "string",
+      "defaultValue": "10.0.0.4",
+      "metadata": {
+        "description": "The static IP address for the internal load balancer. This must be an available IP address in the specified subnet"
+      }
+    },
+    "vNetClusterSubnetName": {
+      "type": "string",
+      "defaultValue": "es-subnet",
+      "metadata": {
+        "description": "Subnet name to use for Elasticsearch nodes"
+      }
+    },
+    "vNetNewClusterSubnetAddressPrefix": {
+      "type": "string",
+      "defaultValue": "10.0.0.0/25",
+      "metadata": {
+        "description": "The address space of the subnet. Required when creating a new Virtual Network"
+      }
+    },
+    "vNetAppGatewaySubnetName": {
+      "type": "string",
+      "defaultValue": "es-gateway-subnet",
+      "metadata": {
+        "description": "Subnet name to use for the Application Gateway. Required when selecting Application Gateway for load balancing"
+      }
+    },
+    "vNetNewAppGatewaySubnetAddressPrefix": {
+      "type": "string",
+      "defaultValue": "10.0.0.128/28",
+      "metadata": {
+        "description": "The address space of the Application Gateway subnet. Required when creating a new Virtual Network and selecting Application Gateway for load balancing"
+      }
+    },
+    "appGatewayTier": {
+      "type": "string",
+      "defaultValue": "Standard",
+      "allowedValues": [
+        "Standard",
+        "WAF"
+      ],
+      "metadata": {
+        "description": "The tier of the Application Gateway. Required when selecting Application Gateway for load balancing"
+      }
+    },
+    "appGatewaySku": {
+      "type": "string",
+      "defaultValue": "Medium",
+      "allowedValues": [
+        "Small",
+        "Medium",
+        "Large"
+      ],
+      "metadata": {
+        "description": "The size of the Application Gateway. Medium or above is recommended for Production clusters, and required when using WAF tier"
+      }
+    },
+    "appGatewayCount": {
+      "type": "int",
+      "defaultValue": 2,
+      "allowedValues": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "metadata": {
+        "description": "The number of instances of the Application Gateway. A minimum of 2 is recommended for Production clusters. Required when selecting Application Gateway for load balancing"
+      }
+    },
+    "appGatewayCertBlob": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "A Base-64 encoded form of the PFX certificate for the Application Gateway. This certificate is used to secure HTTPS connections to the Application Gateway"
+      }
+    },
+    "appGatewayCertPassword": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "The password for the PFX certificate for the Application Gateway."
+      }
+    },
+    "appGatewayWafStatus": {
+      "type": "string",
+      "defaultValue": "Enabled",
+      "allowedValues": [
+        "Enabled",
+        "Disabled"
+      ],
+      "metadata": {
+        "description": "The firewall status of the Application Gateway. Required when selecting Application Gateway for load balancing and using WAF tier."
+      }
+    },
+    "appGatewayWafMode": {
+      "type": "string",
+      "defaultValue": "Detection",
+      "allowedValues": [
+        "Detection",
+        "Prevention"
+      ],
+      "metadata": {
+        "description": "The firewall mode of the Application Gateway. Required when selecting Application Gateway for load balancing and using WAF tier."
+      }
+    },
+    "userCompany": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Name of your company"
+      }
+    },
+    "userEmail": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Your email address"
+      }
+    },
+    "userFirstName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Your first name"
+      }
+    },
+    "userLastName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Your last name"
+      }
+    },
+    "userJobTitle": {
+      "type": "string",
+      "defaultValue": "Other",
+      "allowedValues": [
+        "IT Executive (CIO, CTO, VP Engineering, etc.)",
+        "Business Executive (CEO, COO, CMO, etc.)",
+        "Architect",
+        "Business Development/Alliance Manager",
+        "DBA",
+        "Technical Operations",
+        "Director / Development Manager",
+        "Product / Project Manager",
+        "Software Developer / Engineer",
+        "Consultant",
+        "Student",
+        "Other"
+      ],
+      "metadata": {
+        "description": "Your job title. Pick the nearest description that matches"
+      }
+    },
+    "userCountry": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "The country in which you are based"
+      }
+    }
+  },
+  "variables": {
+    "templateBaseUrl": "[concat(parameters('artifactsBaseUrl'), '/')]",
+    "sharedTemplateUrl": "[concat(variables('templateBaseUrl'), 'partials/shared-resources.json')]",
+    "networkTemplateUrl": "[concat(variables('templateBaseUrl'), 'networks/', if(equals(parameters('vNetNewOrExisting'), 'new'), if(equals(parameters('loadBalancerType'), 'gateway'), 'new-virtual-network-with-gateway', 'new-virtual-network'), 'existing-virtual-network'), '.json')]",
+    "loadBalancerOptions": {
+      "internal": "internal-lb-resources",
+      "external": "external-lb-resources",
+      "gateway": "[concat(toLower(parameters('appGatewayTier')),'-application-gateway-resources')]"
+    },
+    "loadBalancerTemplateUrl": "[concat(variables('templateBaseUrl'), 'loadbalancers/', variables('loadBalancerOptions')[parameters('loadBalancerType')],'.json')]",
+    "osSettingsTemplateUrl": "[concat(variables('templateBaseUrl'), 'settings/ubuntuSettings.json')]",
+    "location": "[parameters('location')]",
+    "azureCloudStorageAccount": {
+      "name": "[parameters('azureCloudStorageAccountName')]",
+      "key": "[parameters('azureCloudStorageAccountKey')]",
+      "install": "[parameters('azureCloudPlugin')]"
+    },
+    "esToKibanaMapping": {
+      "2.0.2": "4.2.2",
+      "2.1.2": "4.3.3",
+      "2.2.2": "4.4.2",
+      "2.3.5": "4.5.4",
+      "2.4.4": "4.6.4",
+      "5.0.2": "5.0.2",
+      "5.1.2": "5.1.2",
+      "5.2.2": "5.2.2",
+      "5.3.2": "5.3.2",
+      "5.4.0": "5.4.0",
+      "5.4.2": "5.4.2",
+      "5.4.3": "5.4.3",
+      "5.5.0": "5.5.0",
+      "5.5.1": "5.5.1",
+      "5.5.2": "5.5.2",
+      "5.5.3": "5.5.3",
+      "5.6.3": "5.6.3"
+    },
+    "esSettings": {
+      "clusterName": "[parameters('esClusterName')]",
+      "version": "[parameters('esVersion')]",
+      "installPlugins": "[parameters('xpackPlugins')]",
+      "installAdditionalPlugins": "[parameters('esAdditionalPlugins')]",
+      "yamlConfiguration": "[parameters('esAdditionalYaml')]",
+      "securityAdminPwd": "[parameters('securityAdminPassword')]",
+      "securityReadPwd": "[parameters('securityReadPassword')]",
+      "securityKibanaPwd": "[parameters('securityKibanaPassword')]",
+      "securityKibanaServerPwd": "[uniqueString(resourceGroup().id, deployment().name, parameters('securityKibanaPassword'))]",
+      "kibanaVersion": "[variables('esToKibanaMapping')[parameters('esVersion')]]"
+    },
+    "phoneHomeSettings": {
+      "email": "[parameters('userEmail')]",
+      "firstName": "[parameters('userFirstName')]",
+      "lastName": "[parameters('userLastName')]",
+      "jobTitle": "[parameters('userJobTitle')]",
+      "company": "[parameters('userCompany')]",
+      "country": "[parameters('userCountry')]",
+      "topology": "[concat('m=', if(equals(parameters('dataNodesAreMasterEligible'), 'No'), '3', '0'), ' ', parameters('vmSizeMasterNodes'), ',d=', parameters('vmDataNodeCount'), ' ', parameters('vmSizeDataNodes'), ',c=', parameters('vmClientNodeCount'), ' ', parameters('vmSizeClientNodes'), ',k=', if(equals(parameters('kibana'), 'Yes'), '1', '0'), ' ', parameters('vmSizeKibana'), ',j=', if(equals(parameters('jumpbox'), 'Yes'), '1', '0'), ' Standard_A0', ',l=', parameters('loadBalancerType'))]"
+    },
+    "networkResourceGroupMap": {
+      "new": "[resourceGroup().name]",
+      "existing": "[parameters('vNetExistingResourceGroup')]"
+    },
+    "dataSkuSettings": {
+      "Standard_A0": {
+        "dataDisks": 1,
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_A1": {
+        "dataDisks": 2,
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_A2": {
+        "dataDisks": 4,
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_A3": {
+        "dataDisks": 8,
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_A4": {
+        "dataDisks": 16,
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_A5": {
+        "dataDisks": 4,
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_A6": {
+        "dataDisks": 8,
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_A7": {
+        "dataDisks": 16,
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_D1": {
+        "dataDisks": 2,
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_D2": {
+        "dataDisks": 4,
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_D3": {
+        "dataDisks": 8,
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_D4": {
+        "dataDisks": 16,
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_D11": {
+        "dataDisks": 4,
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_D12": {
+        "dataDisks": 8,
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_D13": {
+        "dataDisks": 16,
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_D14": {
+        "dataDisks": 32,
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_D1_v2": {
+        "dataDisks": 2,
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_D2_v2": {
+        "dataDisks": 4,
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_D3_v2": {
+        "dataDisks": 8,
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_D4_v2": {
+        "dataDisks": 16,
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_D5_v2": {
+        "dataDisks": 32,
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_D11_v2": {
+        "dataDisks": 4,
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_D12_v2": {
+        "dataDisks": 8,
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_D13_v2": {
+        "dataDisks": 16,
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_D14_v2": {
+        "dataDisks": 32,
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_D15_v2": {
+        "dataDisks": 40,
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_DS1": {
+        "dataDisks": 2,
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_DS2": {
+        "dataDisks": 4,
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_DS3": {
+        "dataDisks": 8,
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_DS4": {
+        "dataDisks": 16,
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_DS11": {
+        "dataDisks": 4,
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_DS12": {
+        "dataDisks": 8,
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_DS13": {
+        "dataDisks": 16,
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_DS14": {
+        "dataDisks": 32,
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_DS1_v2": {
+        "dataDisks": 2,
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_DS2_v2": {
+        "dataDisks": 4,
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_DS3_v2": {
+        "dataDisks": 8,
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_DS4_v2": {
+        "dataDisks": 16,
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_DS5_v2": {
+        "dataDisks": 32,
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_DS11_v2": {
+        "dataDisks": 4,
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_DS12_v2": {
+        "dataDisks": 8,
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_DS13_v2": {
+        "dataDisks": 16,
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_DS14_v2": {
+        "dataDisks": 32,
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_DS15_v2": {
+        "dataDisks": 40,
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_F1": {
+        "dataDisks": 2,
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_F2": {
+        "dataDisks": 4,
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_F4": {
+        "dataDisks": 8,
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_F8": {
+        "dataDisks": 16,
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_F16": {
+        "dataDisks": 32,
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_F1s": {
+        "dataDisks": 2,
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_F2s": {
+        "dataDisks": 4,
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_F4s": {
+        "dataDisks": 8,
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_F8s": {
+        "dataDisks": 16,
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_F16s": {
+        "dataDisks": 32,
+        "storageAccountType": "Premium_LRS"
+      }
+    },
+    "dataDiskSizes": {
+      "Large": 1023,
+      "Medium": 512,
+      "Small": 128
+    },
+    "backendPoolConfigurations": {
+      "internal": [
         {
-            "apiVersion":"2015-01-01",
-            "name":"[variables('esDeploymentName')]",
-            "type":"Microsoft.Resources/deployments",
-            "properties":{
-                "mode":"Incremental",
-                "templateLink":{
-                    "uri":"[concat(variables('esTemplateBase'), '/', 'azuredeploy.json')]",
-                    "contentVersion":"1.0.0.0"
-                },
-                "parameters":{
-                    "adminUsername":{
-                        "value":"[parameters('adminUsername')]"
-                    },
-                    "adminPassword":{
-                        "value":"[parameters('adminPassword')]"
-                    },
-                    "virtualNetworkName":{
-                        "value":"[variables('virtualNetworkName')]"
-                    },
-                    "OS":{
-                        "value":"ubuntu"
-                    },
-                    "authenticationType":{
-                        "value":"password"
-                    },
-                    "sshPublicKey":{
-                        "value":""
-                    },
-                    "loadBalancerType":{
-                        "value":"internal"
-                    },
-                    "jumpbox":{
-                        "value":"Yes"
-                    },
-                    "vmClientNodeCount":{
-                        "value":"[parameters('vmClientNodeCount')]"
-                    },
-                    "vmSizeClientNodes":{
-                        "value":"[parameters('vmSizeClientNodes')]"
-                    },
-                    "vmSizeMasterNodes":{
-                        "value":"[parameters('vmSizeMasterNodes')]"
-                    },
-                    "vmSizeDataNodes":{
-                        "value":"[parameters('vmSizeDataNodes')]"
-                    },
-                    "vmDataNodeCount":{
-                        "value":"[parameters('vmDataNodeCount')]"
-                    },
-                    "esClusterName":{
-                        "value":"[parameters('esClusterName')]"
-                    },
-                    "esVersion":{
-                        "value":"[parameters('esVersion')]"
-                    },
-                    "afs":{
-                        "value":"no"
-                    },
-                    "marvel":{
-                        "value":"no"
-                    },
-                    "marvelCluster":{
-                        "value":"no"
-                    },
-                    "vmSizeMarvelNodes":{
-                        "value":"Standard_D2_v2"
-                    },
-                    "kibana":{
-                        "value":"yes"
-                    },
-                    "sense":{
-                        "value":"no"
-                    },
-                    "jmeterAgent":{
-                        "value":"no"
-                    },
-                    "cloudAzure":{
-                        "value":"no"
-                    },
-                    "cloudAzureStorageAccount":{
-                        "value":""
-                    },
-                    "cloudAzureStorageKey":{
-                        "value":""
-                    },
-                    "_artifactsLocation":{
-                        "value":"[variables('esTemplateBase')]"
-                    },
-                    "_artifactsLocationSasToken":{
-                        "value":""
-                    }
-                }
-            }
-        },
-        {
-            "apiVersion":"2016-03-30",
-            "type":"Microsoft.Network/networkSecurityGroups",
-            "name":"[variables('vmNsgName')]",
-            "location":"[resourceGroup().location]",
-            "properties":{
-                "securityRules":[
-                    {
-                        "name":"SSH",
-                        "properties":{
-                            "description":"Allows SSH traffic",
-                            "protocol":"Tcp",
-                            "sourcePortRange":"22",
-                            "destinationPortRange":"22",
-                            "sourceAddressPrefix":"*",
-                            "destinationAddressPrefix":"*",
-                            "access":"Allow",
-                            "priority":100,
-                            "direction":"Inbound"
-                        }
-                    }
-                ]
-            }
-        },
-        {
-            "apiVersion":"2016-03-30",
-            "type":"Microsoft.Network/publicIPAddresses",
-            "name":"[variables('vmPipName')]",
-            "location":"[resourceGroup().location]",
-            "properties":{
-                "publicIPAllocationMethod":"Static"
-            }
-        },
-        {
-            "apiVersion":"2016-03-30",
-            "type":"Microsoft.Network/networkInterfaces",
-            "name":"[variables('vmNicName')]",
-            "location":"[resourceGroup().location]",
-            "dependsOn":[
-                "[resourceId('Microsoft.Resources/deployments', variables('esDeploymentName'))]",
-                "[resourceId('Microsoft.Network/networkSecurityGroups', variables('vmNsgName'))]",
-                "[resourceId('Microsoft.Network/publicIPAddresses', variables('vmPipName'))]"
-            ],
-            "properties":{
-                "ipConfigurations":[
-                    {
-                        "name":"ipconfig2",
-                        "properties":{
-                            "privateIPAllocationMethod":"Dynamic",
-                            "publicIPAddress":{
-                                "id":"[resourceId('Microsoft.Network/publicIPAddresses', variables('vmPipName'))]"
-                            },
-                            "subnet":{
-                                "id":"[variables('subnetRef')]"
-                            },
-                            "networkSecurityGroup":{
-                                "id":"[resourceId('Microsoft.Network/networkSecurityGroups', variables('vmNsgName'))]"
-                            }
-                        }
-                    }
-                ]
-            }
-        },
-        {
-            "type":"Microsoft.Storage/storageAccounts",
-            "name":"[variables('storageAccountName')]",
-            "apiVersion":"2016-01-01",
-            "sku":{
-                "name":"[variables('storageAccountType')]"
-            },
-            "kind":"Storage",
-            "location":"[resourceGroup().location]",
-            "tags":{
-                "displayName":"StorageAccount"
-            },
-            "properties":{
-
-            }
-        },
-        {
-            "apiVersion":"2015-06-15",
-            "type":"Microsoft.Compute/virtualMachines",
-            "name":"[variables('vmName')]",
-            "location":"[resourceGroup().location]",
-            "tags":{
-                "displayName":"VirtualMachine"
-            },
-            "dependsOn":[
-                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
-                "[resourceId('Microsoft.Network/networkInterfaces', variables('vmNicName'))]"
-            ],
-            "properties":{
-                "hardwareProfile":{
-                    "vmSize":"[variables('vmSize')]"
-                },
-                "osProfile":{
-                    "computerName":"[variables('vmName')]",
-                    "adminUsername":"[parameters('adminUsername')]",
-                    "adminPassword":"[parameters('adminPassword')]"
-                },
-                "storageProfile":{
-                    "imageReference":{
-                        "publisher":"[variables('imagePublisher')]",
-                        "offer":"[variables('imageOffer')]",
-                        "sku":"[parameters('ubuntuOSVersion')]",
-                        "version":"latest"
-                    },
-                    "osDisk":{
-                        "name":"osdisk",
-                        "vhd":{
-                            "uri":"[concat(reference(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2016-01-01').primaryEndpoints.blob, variables('vmStorageAccountContainerName'), '/', variables('OSDiskName'), '.vhd')]"
-                        },
-                        "caching":"ReadWrite",
-                        "createOption":"FromImage"
-                    }
-                },
-                "networkProfile":{
-                    "networkInterfaces":[
-                        {
-                            "id":"[resourceId('Microsoft.Network/networkInterfaces', variables('vmNicName'))]"
-                        }
-                    ]
-                }
-            }
-        },
-        {
-            "type":"Microsoft.Compute/virtualMachines/extensions",
-            "name":"[concat(variables('vmName'),'/', variables('extensionName'))]",
-            "apiVersion":"2015-06-15",
-            "location":"[resourceGroup().location]",
-            "dependsOn":[
-                "[resourceId('Microsoft.Compute/virtualMachines', variables('vmName'))]",
-                "[resourceId('Microsoft.Resources/deployments', variables('esDeploymentName'))]"
-            ],
-            "properties":{
-                "publisher":"Microsoft.Azure.Extensions",
-                "type":"CustomScript",
-                "typeHandlerVersion":"2.0",
-                "autoUpgradeMinorVersion":true,
-                "settings":{
-                    "fileUris":[
-                        "[concat(parameters('_artifactsLocation'), '/scripts/elk-simple-install-ubuntu.sh', parameters('_artifactsLocationSasToken'))]"
-                    ]
-                },
-                "protectedSettings":{
-                    "commandToExecute":"[concat('bash ./elk-simple-install-ubuntu.sh -e ', parameters('encodedConfigString'), ' -a ', parameters('existingDiagnosticsStorageAccountName'), ' -k ', parameters('existingDiagnosticsStorageAccountKey'), ' -t ', parameters('existingDiagnosticsStorageTableNames'), ' -i ', variables('esHost'))]"
-                }
-            }
+          "id": "[concat(resourceId('Microsoft.Network/loadBalancers','es-internal-lb'),'/backendAddressPools/LBBE')]"
         }
-    ]
+      ],
+      "external": [
+        {
+          "id": "[concat(resourceId('Microsoft.Network/loadBalancers','es-internal-lb'),'/backendAddressPools/LBBE')]"
+        },
+        {
+          "id": "[concat(resourceId('Microsoft.Network/loadBalancers','es-external-lb'),'/backendAddressPools/LBBE')]"
+        }
+      ],
+      "gateway": [
+        {
+          "id": "[concat(resourceId('Microsoft.Network/loadBalancers','es-internal-lb'),'/backendAddressPools/LBBE')]"
+        }
+      ]
+    },
+    "lbBackEndPoolsAdded": {
+      "backendPools": "[variables('backendPoolConfigurations')[parameters('loadBalancerType')]]"
+    },
+    "lbBackendPoolsRemoved": {
+      "backendPools": []
+    },
+    "dataLoadBalancerOptions": [
+      "[variables('lbBackEndPoolsAdded')]",
+      "[variables('lbBackEndPoolsRemoved')]"
+    ],
+    "clientResourceIndex": "[mod(add(parameters('vmClientNodeCount'),2),add(parameters('vmClientNodeCount'),1))]",
+    "nodesPerStorageMapping": {
+      "Standard_LRS_Small_1": 40,
+      "Standard_LRS_Small_2": 20,
+      "Standard_LRS_Small_4": 10,
+      "Standard_LRS_Small_8": 5,
+      "Standard_LRS_Small_16": 2,
+      "Standard_LRS_Small_32": 1,
+      "Standard_LRS_Small_40": 1,
+      "Standard_LRS_Small_0": 0,
+      "Standard_LRS_Medium_1": 40,
+      "Standard_LRS_Medium_2": 20,
+      "Standard_LRS_Medium_4": 10,
+      "Standard_LRS_Medium_8": 5,
+      "Standard_LRS_Medium_16": 2,
+      "Standard_LRS_Medium_32": 1,
+      "Standard_LRS_Medium_40": 1,
+      "Standard_LRS_Medium_0": 0,
+      "Standard_LRS_Large_1": 40,
+      "Standard_LRS_Large_2": 20,
+      "Standard_LRS_Large_4": 10,
+      "Standard_LRS_Large_8": 5,
+      "Standard_LRS_Large_16": 2,
+      "Standard_LRS_Large_32": 1,
+      "Standard_LRS_Large_40": 1,
+      "Standard_LRS_Large_0": 0,
+      "Premium_LRS_Small_1": 250,
+      "Premium_LRS_Small_2": 125,
+      "Premium_LRS_Small_4": 62,
+      "Premium_LRS_Small_8": 31,
+      "Premium_LRS_Small_16": 15,
+      "Premium_LRS_Small_32": 7,
+      "Premium_LRS_Small_40": 6,
+      "Premium_LRS_Small_0": 0,
+      "Premium_LRS_Medium_1": 60,
+      "Premium_LRS_Medium_2": 30,
+      "Premium_LRS_Medium_4": 15,
+      "Premium_LRS_Medium_8": 7,
+      "Premium_LRS_Medium_16": 3,
+      "Premium_LRS_Medium_32": 1,
+      "Premium_LRS_Medium_40": 1,
+      "Premium_LRS_Medium_0": 0,
+      "Premium_LRS_Large_1": 34,
+      "Premium_LRS_Large_2": 17,
+      "Premium_LRS_Large_4": 8,
+      "Premium_LRS_Large_8": 4,
+      "Premium_LRS_Large_16": 2,
+      "Premium_LRS_Large_32": 1,
+      "Premium_LRS_Large_40": 1,
+      "Premium_LRS_Large_0": 0
+    },
+    "storageAccountOverrides": {
+      "Default": "[variables('dataSkuSettings')[parameters('vmSizeDataNodes')].storageAccountType]",
+      "Standard": "Standard_LRS",
+      "Premium": "Premium_LRS"
+    },
+    "resolvedStorageAccountType": "[variables('storageAccountOverrides')[parameters('storageAccountType')]]",
+    "tmpVmSizeDataDisks": "[variables('dataSkuSettings')[parameters('vmSizeDataNodes')].dataDisks]",
+    "dataDiskOptions": [
+      "[parameters('vmDataDiskCount')]",
+      "[variables('tmpVmSizeDataDisks')]"
+    ],
+    "smallestDataDiskOption": "[min(variables('dataDiskOptions'))]",
+    "numberOfDataDisks": "[div(add(add(0, variables('smallestDataDiskOption')), int(replace(string(sub(0, variables('smallestDataDiskOption'))), '-', ''))), 2)]",
+    "nodesPerStorageAccount": "[variables('nodesPerStorageMapping')[concat(variables('resolvedStorageAccountType'), '_', parameters('vmDataDiskSize'), '_', string(variables('numberOfDataDisks')))]]",
+    "nodesPerStorageAccountDiv": "[div(add(add(1, variables('nodesPerStorageAccount')), int(replace(string(sub(1, variables('nodesPerStorageAccount'))), '-', ''))), 2)]",
+    "storageAccountsCount": "[add(div(parameters('vmDataNodeCount'), variables('nodesPerStorageAccountDiv')), mod(add(mod(parameters('vmDataNodeCount'), variables('nodesPerStorageAccountDiv')),2), add(mod(parameters('vmDataNodeCount'), variables('nodesPerStorageAccountDiv')),1)))]",
+    "kibanaHttps": "[if(and(greater(length(parameters('kibanaKeyBlob')), 0), greater(length(parameters('kibanaCertBlob')), 0)), 'Yes', 'No')]",
+    "topologySettings": {
+      "dataNodesAreMasterEligible": "[parameters('dataNodesAreMasterEligible')]",
+      "vmDataNodeCount": "[parameters('vmDataNodeCount')]",
+      "vmSizeDataNodes": "[parameters('vmSizeDataNodes')]",
+      "vmHostNamePrefix": "[parameters('vmHostNamePrefix')]",
+      "vmClientNodeCount": "[parameters('vmClientNodeCount')]",
+      "vmSizeClientNodes": "[parameters('vmSizeClientNodes')]",
+      "vNetLoadBalancerIp": "[parameters('vNetLoadBalancerIp')]",
+      "vmSizeMasterNodes": "[parameters('vmSizeMasterNodes')]",
+      "vmSizeKibana": "[parameters('vmSizeKibana')]",
+      "kibana": "[parameters('kibana')]",
+      "kibanaKeyBlob": "[parameters('kibanaKeyBlob')]",
+      "kibanaKeyPassphrase": "[parameters('kibanaKeyPassphrase')]",
+      "kibanaCertBlob": "[parameters('kibanaCertBlob')]",
+      "kibanaHttps": "[variables('kibanaHttps')]",
+      "jumpbox": "[parameters('jumpbox')]",
+      "dataNodeStorageSettings": {
+        "count": "[variables('storageAccountsCount')]",
+        "nodesPerStorageAccount": "[variables('nodesPerStorageAccount')]",
+        "accountType": "[variables('resolvedStorageAccountType')]",
+        "diskSize": "[variables('dataDiskSizes')[parameters('vmDataDiskSize')]]",
+        "dataDisks": "[variables('numberOfDataDisks')]"
+      },
+      "dataLoadBalancerBackEndPools": "[variables('dataLoadBalancerOptions')[variables('clientResourceIndex')].backendPools]",
+      "loadBalancerBackEndPools": "[variables('lbBackEndPoolsAdded').backendPools]",
+      "enableAnonymousAccess": "[if(equals(parameters('loadBalancerType'), 'gateway'), 'Yes', 'No')]"
+    },
+    "networkSettings": {
+      "name": "[parameters('vNetName')]",
+      "resourceGroup": "[variables('networkResourceGroupMap')[parameters('vNetNewOrExisting')]]",
+      "location": "[variables('location')]",
+      "addressPrefix": "[parameters('vNetNewAddressPrefix')]",
+      "subnet": {
+        "name": "[parameters('vNetClusterSubnetName')]",
+        "addressPrefix": "[parameters('vNetNewClusterSubnetAddressPrefix')]",
+        "loadbalancerIp": "[parameters('vNetLoadBalancerIp')]"
+      },
+      "applicationGatewaySubnet": {
+        "name": "[parameters('vNetAppGatewaySubnetName')]",
+        "addressPrefix": "[parameters('vNetNewAppGatewaySubnetAddressPrefix')]"
+      }
+    },
+    "commonVmSettings": {
+      "namespacePrefix": "[parameters('vmHostNamePrefix')]",
+      "storageAccountName": "[concat('elastic', uniqueString(resourceGroup().id, deployment().name))]",
+      "location": "[variables('location')]",
+      "subnet": "[variables('networkSettings').subnet]",
+      "subnetId": "[concat(resourceId(variables('networkSettings').resourceGroup, 'Microsoft.Network/virtualNetworks', variables('networkSettings').name), '/subnets/', variables('networkSettings').subnet.name)]",
+      "credentials": {
+        "adminUsername": "[parameters('adminUsername')]",
+        "password": "[parameters('adminPassword')]",
+        "authenticationType": "[parameters('authenticationType')]",
+        "sshPublicKey": "[parameters('sshPublicKey')]"
+      }
+    },
+    "applicationGatewaySettings": {
+      "skuName": "[concat(parameters('appGatewayTier'), '_', parameters('appGatewaySku'))]",
+      "tier": "[parameters('appGatewayTier')]",
+      "instanceCount": "[parameters('appGatewayCount')]",
+      "certBlob": "[parameters('appGatewayCertBlob')]",
+      "certPassword": "[parameters('appGatewayCertPassword')]",
+      "firewallStatus": "[parameters('appGatewayWafStatus')]",
+      "firewallMode": "[parameters('appGatewayWafMode')]"
+    }
+  },
+  "resources": [
+    {
+      "name": "shared",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2016-02-01",
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[variables('sharedTemplateUrl')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "location": {
+            "value": "[variables('location')]"
+          },
+          "storageAccountName": {
+            "value": "[variables('commonVmSettings').storageAccountName]"
+          },
+          "elasticTags": {
+            "value": "[parameters('elasticTags')]"
+          }
+        }
+      }
+    },
+    {
+      "condition": "[equals(parameters('vNetNewOrExisting'), 'new')]",
+      "name": "network",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2016-02-01",
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[variables('networkTemplateUrl')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "networkSettings": {
+            "value": "[variables('networkSettings')]"
+          },
+          "elasticTags": {
+            "value": "[parameters('elasticTags')]"
+          }
+        }
+      }
+    },
+    {
+      "name": "loadbalancer",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2016-02-01",
+      "dependsOn": [
+        "[concat('Microsoft.Resources/deployments/', 'shared')]",
+        "[concat('Microsoft.Resources/deployments/', 'network')]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[variables('loadBalancerTemplateUrl')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "networkSettings": {
+            "value": "[variables('networkSettings')]"
+          },
+          "applicationGatewaySettings": {
+            "value": "[variables('applicationGatewaySettings')]"
+          },
+          "elasticTags": {
+            "value": "[parameters('elasticTags')]"
+          }
+        }
+      }
+    },
+    {
+      "name": "virtual-machines",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2016-02-01",
+      "dependsOn": [
+        "[concat('Microsoft.Resources/deployments/', 'loadbalancer')]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[variables('osSettingsTemplateUrl')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "templateBaseUrl": {
+            "value": "[variables('templateBaseUrl')]"
+          },
+          "esSettings": {
+            "value": "[variables('esSettings')]"
+          },
+          "commonVmSettings": {
+            "value": "[variables('commonVmSettings')]"
+          },
+          "phoneHomeSettings": {
+            "value": "[variables('phoneHomeSettings')]"
+          },
+          "topologySettings": {
+            "value": "[variables('topologySettings')]"
+          },
+          "networkSettings": {
+            "value": "[variables('networkSettings')]"
+          },
+          "azureCloudStorageAccount": {
+            "value": "[variables('azureCloudStorageAccount')]"
+          },
+          "elasticTags": {
+            "value": "[parameters('elasticTags')]"
+          }
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "loadbalancer": {
+      "value": "[reference('loadbalancer').outputs.fqdn.value]",
+      "type": "string"
+    },
+    "kibana": {
+      "value": "[reference('virtual-machines').outputs.kibana.value]",
+      "type": "string"
+    },
+    "jumpboxssh": {
+      "value": "[reference('virtual-machines').outputs.jumpboxssh.value]",
+      "type": "string"
+    }
+  }
 }
